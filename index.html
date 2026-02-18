@@ -5,7 +5,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>World Pomodoro</title>
 <style>
+  #enableSound {
+  font-size: 18px;
+  padding: 12px 20px;
+  border-radius: 12px;
+  border: none;
+  background: black;
+  color: white;
+}
   body {
+    <button id="enableSound">🔊 音を有効化</button>
     font-family: -apple-system, system-ui, sans-serif;
     text-align: center;
     margin: 0;
@@ -44,6 +53,14 @@
 <div id="time">--</div>
 
 <script>
+  let soundEnabled = false;
+
+document.getElementById("enableSound")?.addEventListener("click", () => {
+  beep.play().then(() => {
+    soundEnabled = true;
+    document.getElementById("enableSound").style.display = "none";
+  });
+});
 // 音の準備
 const beep = new Audio("https://actions.google.com/sounds/v1/alarms/beep_short.ogg");
 let lastState = "";
@@ -78,7 +95,10 @@ function update() {
   document.getElementById("time").textContent =
     `${pad(h)}:${pad(m)}:${pad(s)}`;
 }
-
+if (phase.name !== lastState) {
+  if (soundEnabled) beep.play();
+  lastState = phase.name;
+}
 setInterval(update, 250);
 update();
   document.getElementById("time").textContent =
