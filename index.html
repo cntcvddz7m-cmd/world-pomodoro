@@ -44,7 +44,10 @@
 <div id="time">--</div>
 
 <script>
-function phaseFromMinute(min) {
+// 音の準備
+const beep = new Audio("https://actions.google.com/sounds/v1/alarms/beep_short.ogg");
+let lastState = "";
+  function phaseFromMinute(min) {
   // 0-24 work, 25-29 break, 30-54 work, 55-59 break
   if (min < 25) return { name: "作業", nextAt: 25 };
   if (min < 30) return { name: "休憩", nextAt: 30 };
@@ -78,6 +81,13 @@ function update() {
 
 setInterval(update, 250);
 update();
+  document.getElementById("time").textContent =
+  `${pad(h)}:${pad(m)}:${pad(s)}`;
+  // 状態が変わったら音を鳴らす
+if (phase.name !== lastState) {
+  beep.play();
+  lastState = phase.name;
+}
 </script>
 
 </body>
