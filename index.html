@@ -83,14 +83,23 @@
 
   // ===== 1つのAudioContextで鳴らす（iOS向け）=====
   async function ensureAudioRunning(){
+  try {
     if (!audioCtx) return false;
-    try {
-      if (audioCtx.state !== "running") await audioCtx.resume();
-      return audioCtx.state === "running";
-    } catch(e) {
-      return false;
+
+    // interrupted のときは作り直すのが一番確実
+    if (audioCtx.state === "interrupted") {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      audioCtx = new AudioCtx();
     }
+
+    if (audioCtx.state !== "running") {
+      await audioCtx.resume();
+    }
+    return audioCtx.state === "running";
+  } catch (e) {
+    return false;
   }
+}
 
   async function beep(freq=1200, ms=90, volume=0.25, type="square") {
     if (!audioCtx) return;
@@ -158,7 +167,14 @@
       `${pad(h)}:${pad(m)}:${pad(s)}`;
 
     dbg(`soundEnabled=${soundEnabled} / audio=${audioCtx?audioCtx.state:"none"} / lastState=${lastState} / now=${pad(h)}:${pad(m)}:${pad(s)}`);
-
+   
+    // interrupted になったら、音ボタンを出し直して再許可を促す
+if (soundEnabled && audioCtx && audioCtx.state === "interrupted") {
+  soundEnabled = false;
+  const btn = document.getElementById("enableSound");
+  if (btn) btn.style.display = "inline-block";
+}
+    
     // 切替時に鳴らす
     if (phase.name !== lastState) {
       if (soundEnabled) {
@@ -209,6 +225,12 @@
 
   setInterval(update, 250);
   update();
+  document.addEventListener("visibilitychange", () => {
+  if (!document.hidden && soundEnabled) ensureAudioRunning();
+});
+window.addEventListener("focus", () => {
+  if (soundEnabled) ensureAudioRunning();
+});
 </script>
 </body>
 </html>
