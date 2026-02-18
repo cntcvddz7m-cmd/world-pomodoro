@@ -157,11 +157,37 @@
       btn.style.marginBottom = "18px";
       document.body.insertBefore(btn, document.body.firstChild);
     }
-    btn.addEventListener("click", () => {
-      soundEnabled = true;
-      workSound(); // ここで鳴るなら許可OK
-      btn.style.display = "none";
-    });
+let audioKeepAlive;
+
+btn.addEventListener("click", () => {
+  soundEnabled = true;
+  workSound(); // 確認音
+
+  // ★ iOS対策：AudioContextを寝かせない
+  const AudioCtx = window.AudioContext || window.webkitAudioContext;
+  const ctx = new AudioCtx();
+
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+
+  gain.gain.value = 0.00001; // 聞こえない音量
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  osc.start();
+
+  // 1秒ごとに超微音を流し続ける
+  audioKeepAlive = setInterval(() => {
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    g.gain.value = 0.00001;
+    o.connect(g);
+    g.connect(ctx.destination);
+    o.start();
+    o.stop(ctx.currentTime + 0.01);
+  }, 1000);
+
+  btn.style.display = "none";
+});
   })();
 
   setInterval(update, 250);
