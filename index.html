@@ -60,17 +60,24 @@
   let soundEnabled = false;
   let lastState = "";
 
-  // 外部ファイル不要のビープ音
-  function beep() {
+  // --- 触覚（バイブ） ---
+  function buzz(pattern = [80]) {
+    try {
+      if (navigator.vibrate) navigator.vibrate(pattern);
+    } catch (e) {}
+  }
+
+  // --- 外部ファイル不要のビープ音 ---
+  function beep(freq = 1200, ms = 90, volume = 0.25, type = "square") {
     try {
       const AudioCtx = window.AudioContext || window.webkitAudioContext;
       const ctx = new AudioCtx();
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
 
-      osc.type = "sine";
-      osc.frequency.value = 880;      // 音の高さ
-      gain.gain.value = 0.15;         // 音量（大きすぎ注意）
+      osc.type = type;          // square = ピッ, sine = まるい音
+      osc.frequency.value = freq;
+      gain.gain.value = volume;
 
       osc.connect(gain);
       gain.connect(ctx.destination);
@@ -79,12 +86,26 @@
       setTimeout(() => {
         osc.stop();
         ctx.close();
-      }, 120); // 鳴らす長さms
+      }, ms);
     } catch (e) {
-      // ここで落ちても表示は止めない
+      // 音が鳴らなくてもアプリ自体は止めない
     }
   }
 
+  // 作業：ピッピ（短く2回）
+  function workSound() {
+    beep(1500, 70, 0.30, "square");
+    setTimeout(() => beep(1500, 70, 0.30, "square"), 150);
+    buzz([60, 40, 60]); // バイブも2回っぽく
+  }
+
+  // 休憩：低めにピー（1回長め）
+  function breakSound() {
+    beep(650, 160, 0.28, "sine");
+    buzz([120]); // 1回どん
+  }
+
+  // ポモドーロの状態判定
   function phaseFromMinute(min) {
     if (min < 25) return { name: "作業", nextAt: 25 };
     if (min < 30) return { name: "休憩", nextAt: 30 };
@@ -113,25 +134,31 @@
     document.getElementById("time").textContent =
       `${pad(h)}:${pad(m)}:${pad(s)}`;
 
+    // 状態が変わった瞬間だけ鳴らす
     if (phase.name !== lastState) {
-      if (soundEnabled) beep();
+      if (soundEnabled) {
+        if (phase.name === "作業") workSound();
+        else breakSound();
+      }
       lastState = phase.name;
     }
   }
 
-  // ボタンが押されたら“音が鳴る権利”を得る（iOS対策）
+  // iOS対策：ユーザー操作で音を許可する
   const btn = document.getElementById("enableSound");
   if (btn) {
     btn.addEventListener("click", () => {
       soundEnabled = true;
-      beep(); // ここで鳴ればOK
+
+      // 押した直後に「有効化できたよ」確認音
+      workSound();
+
       btn.style.display = "none";
     });
   }
 
   setInterval(update, 250);
   update();
-</script>
 </script>
 
 </body>
