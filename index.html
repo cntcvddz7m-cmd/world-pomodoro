@@ -57,12 +57,33 @@
 <div id="time">--</div>
 
 <script>
-  // iPhoneで通りやすい音（mp3）
-  const beep = new Audio("https://www.soundjay.com/buttons/sounds/button-09.mp3");
-  beep.preload = "auto";
-
   let soundEnabled = false;
   let lastState = "";
+
+  // 外部ファイル不要のビープ音
+  function beep() {
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      const ctx = new AudioCtx();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.type = "sine";
+      osc.frequency.value = 880;      // 音の高さ
+      gain.gain.value = 0.15;         // 音量（大きすぎ注意）
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start();
+      setTimeout(() => {
+        osc.stop();
+        ctx.close();
+      }, 120); // 鳴らす長さms
+    } catch (e) {
+      // ここで落ちても表示は止めない
+    }
+  }
 
   function phaseFromMinute(min) {
     if (min < 25) return { name: "作業", nextAt: 25 };
@@ -81,7 +102,6 @@
 
     const phase = phaseFromMinute(m);
 
-    // 次の切り替えまでの残り
     const nextMinute = phase.nextAt;
     const secondsToNext = ((nextMinute === 60 ? 60 : nextMinute) - m) * 60 - s;
     const mmLeft = Math.max(0, Math.floor(secondsToNext / 60));
@@ -93,32 +113,25 @@
     document.getElementById("time").textContent =
       `${pad(h)}:${pad(m)}:${pad(s)}`;
 
-    // 状態が変わった瞬間だけ鳴らす
     if (phase.name !== lastState) {
-      if (soundEnabled) {
-        // iOS対策：毎回頭出ししてから再生
-        beep.currentTime = 0;
-        beep.play().catch(() => {});
-      }
+      if (soundEnabled) beep();
       lastState = phase.name;
     }
   }
 
-  // “ユーザー操作”で音を許可する
-  document.getElementById("enableSound").addEventListener("click", async () => {
-    try {
-      beep.currentTime = 0;
-      await beep.play();      // ここで鳴れば許可取れた合図
+  // ボタンが押されたら“音が鳴る権利”を得る（iOS対策）
+  const btn = document.getElementById("enableSound");
+  if (btn) {
+    btn.addEventListener("click", () => {
       soundEnabled = true;
-      document.getElementById("enableSound").style.display = "none";
-    } catch (e) {
-      // ミュート/サイレント等で失敗することもあるので、押し直してもらう
-      alert("音が再生できなかった…消音モードや音量を確認して、もう一回押してみて。");
-    }
-  });
+      beep(); // ここで鳴ればOK
+      btn.style.display = "none";
+    });
+  }
 
   setInterval(update, 250);
   update();
+</script>
 </script>
 
 </body>
