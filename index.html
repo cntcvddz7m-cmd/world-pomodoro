@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>World Pomodoro</title>
+<style>
+  body {
+    font-family: -apple-system, system-ui, sans-serif;
+    text-align: center;
+    margin: 0;
+    padding: 32px 16px;
+  }
+  #state {
+    font-size: 56px;
+    font-weight: 800;
+    margin-top: 24px;
+  }
+  #next {
+    font-size: 18px;
+    margin-top: 14px;
+    opacity: 0.8;
+  }
+  #time {
+    font-size: 22px;
+    margin-top: 18px;
+    opacity: 0.8;
+  }
+  .badge {
+    display: inline-block;
+    padding: 10px 14px;
+    border-radius: 999px;
+    border: 1px solid #ddd;
+    font-size: 14px;
+    opacity: 0.9;
+  }
+</style>
+</head>
+<body>
+
+<div class="badge">時計同期ポモドーロ（00/25/30/55）</div>
+<div id="state">--</div>
+<div id="next">--</div>
+<div id="time">--</div>
+
+<script>
+function phaseFromMinute(min) {
+  // 0-24 work, 25-29 break, 30-54 work, 55-59 break
+  if (min < 25) return { name: "作業", nextAt: 25 };
+  if (min < 30) return { name: "休憩", nextAt: 30 };
+  if (min < 55) return { name: "作業", nextAt: 55 };
+  return { name: "休憩", nextAt: 60 };
+}
+
+function pad(n){ return String(n).padStart(2, "0"); }
+
+function update() {
+  const now = new Date();
+  const h = now.getHours();
+  const m = now.getMinutes();
+  const s = now.getSeconds();
+
+  const phase = phaseFromMinute(m);
+
+  // 次の切り替えまでの残り秒
+  const nextMinute = phase.nextAt;
+  const minutesLeft = (nextMinute - m) - 1;
+  const secondsLeft = 60 - s;
+  const mmLeft = Math.max(0, minutesLeft);
+  const ssLeft = (secondsLeft === 60) ? 0 : secondsLeft;
+
+  document.getElementById("state").textContent = phase.name;
+  document.getElementById("next").textContent =
+    `次：${pad(nextMinute % 60)}分（残り ${pad(mmLeft)}:${pad(ssLeft)}）`;
+  document.getElementById("time").textContent =
+    `${pad(h)}:${pad(m)}:${pad(s)}`;
+}
+
+setInterval(update, 250);
+update();
+</script>
+
+</body>
+</html>
