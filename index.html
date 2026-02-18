@@ -133,7 +133,12 @@
       `次：${pad(nextMinute % 60)}分（残り ${pad(mmLeft)}:${pad(ssLeft)}）`;
     document.getElementById("time").textContent =
       `${pad(h)}:${pad(m)}:${pad(s)}`;
-
+    // ★ 作業 / 休憩で背景色を変える
+    if (phase.name === "作業") {
+    document.body.style.background = "#eef6ff"; // 青っぽい
+    } else {
+    document.body.style.background = "#eaffea"; // 緑っぽい
+    }
     // 状態が変わった瞬間だけ鳴らす
     if (phase.name !== lastState) {
       if (soundEnabled) {
