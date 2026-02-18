@@ -5,25 +5,25 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>World Pomodoro</title>
 <style>
-  #enableSound {
-  font-size: 18px;
-  padding: 12px 20px;
-  border-radius: 12px;
-  border: none;
-  background: black;
-  color: white;
-}
   body {
-    <button id="enableSound">🔊 音を有効化</button>
     font-family: -apple-system, system-ui, sans-serif;
     text-align: center;
     margin: 0;
     padding: 32px 16px;
   }
+  #enableSound {
+    font-size: 18px;
+    padding: 12px 20px;
+    border-radius: 12px;
+    border: none;
+    background: black;
+    color: white;
+    margin-bottom: 18px;
+  }
   #state {
     font-size: 56px;
     font-weight: 800;
-    margin-top: 24px;
+    margin-top: 18px;
   }
   #next {
     font-size: 18px;
@@ -42,10 +42,14 @@
     border: 1px solid #ddd;
     font-size: 14px;
     opacity: 0.9;
+    margin-bottom: 14px;
   }
 </style>
 </head>
+
 <body>
+
+<button id="enableSound">🔊 音を有効化</button>
 
 <div class="badge">時計同期ポモドーロ（00/25/30/55）</div>
 <div id="state">--</div>
@@ -53,61 +57,68 @@
 <div id="time">--</div>
 
 <script>
+  // iPhoneで通りやすい音（mp3）
+  const beep = new Audio("https://www.soundjay.com/buttons/sounds/button-09.mp3");
+  beep.preload = "auto";
+
   let soundEnabled = false;
+  let lastState = "";
 
-document.getElementById("enableSound")?.addEventListener("click", () => {
-  beep.play().then(() => {
-    soundEnabled = true;
-    document.getElementById("enableSound").style.display = "none";
-  });
-});
-// 音の準備
-const beep = new Audio("https://actions.google.com/sounds/v1/alarms/beep_short.ogg");
-let lastState = "";
   function phaseFromMinute(min) {
-  // 0-24 work, 25-29 break, 30-54 work, 55-59 break
-  if (min < 25) return { name: "作業", nextAt: 25 };
-  if (min < 30) return { name: "休憩", nextAt: 30 };
-  if (min < 55) return { name: "作業", nextAt: 55 };
-  return { name: "休憩", nextAt: 60 };
-}
+    if (min < 25) return { name: "作業", nextAt: 25 };
+    if (min < 30) return { name: "休憩", nextAt: 30 };
+    if (min < 55) return { name: "作業", nextAt: 55 };
+    return { name: "休憩", nextAt: 60 };
+  }
 
-function pad(n){ return String(n).padStart(2, "0"); }
+  function pad(n){ return String(n).padStart(2, "0"); }
 
-function update() {
-  const now = new Date();
-  const h = now.getHours();
-  const m = now.getMinutes();
-  const s = now.getSeconds();
+  function update() {
+    const now = new Date();
+    const h = now.getHours();
+    const m = now.getMinutes();
+    const s = now.getSeconds();
 
-  const phase = phaseFromMinute(m);
+    const phase = phaseFromMinute(m);
 
-  // 次の切り替えまでの残り秒
-  const nextMinute = phase.nextAt;
-  const minutesLeft = (nextMinute - m) - 1;
-  const secondsLeft = 60 - s;
-  const mmLeft = Math.max(0, minutesLeft);
-  const ssLeft = (secondsLeft === 60) ? 0 : secondsLeft;
+    // 次の切り替えまでの残り
+    const nextMinute = phase.nextAt;
+    const secondsToNext = ((nextMinute === 60 ? 60 : nextMinute) - m) * 60 - s;
+    const mmLeft = Math.max(0, Math.floor(secondsToNext / 60));
+    const ssLeft = Math.max(0, secondsToNext % 60);
 
-  document.getElementById("state").textContent = phase.name;
-  document.getElementById("next").textContent =
-    `次：${pad(nextMinute % 60)}分（残り ${pad(mmLeft)}:${pad(ssLeft)}）`;
-  document.getElementById("time").textContent =
-    `${pad(h)}:${pad(m)}:${pad(s)}`;
-}
-if (phase.name !== lastState) {
-  if (soundEnabled) beep.play();
-  lastState = phase.name;
-}
-setInterval(update, 250);
-update();
-  document.getElementById("time").textContent =
-  `${pad(h)}:${pad(m)}:${pad(s)}`;
-  // 状態が変わったら音を鳴らす
-if (phase.name !== lastState) {
-  beep.play();
-  lastState = phase.name;
-}
+    document.getElementById("state").textContent = phase.name;
+    document.getElementById("next").textContent =
+      `次：${pad(nextMinute % 60)}分（残り ${pad(mmLeft)}:${pad(ssLeft)}）`;
+    document.getElementById("time").textContent =
+      `${pad(h)}:${pad(m)}:${pad(s)}`;
+
+    // 状態が変わった瞬間だけ鳴らす
+    if (phase.name !== lastState) {
+      if (soundEnabled) {
+        // iOS対策：毎回頭出ししてから再生
+        beep.currentTime = 0;
+        beep.play().catch(() => {});
+      }
+      lastState = phase.name;
+    }
+  }
+
+  // “ユーザー操作”で音を許可する
+  document.getElementById("enableSound").addEventListener("click", async () => {
+    try {
+      beep.currentTime = 0;
+      await beep.play();      // ここで鳴れば許可取れた合図
+      soundEnabled = true;
+      document.getElementById("enableSound").style.display = "none";
+    } catch (e) {
+      // ミュート/サイレント等で失敗することもあるので、押し直してもらう
+      alert("音が再生できなかった…消音モードや音量を確認して、もう一回押してみて。");
+    }
+  });
+
+  setInterval(update, 250);
+  update();
 </script>
 
 </body>
